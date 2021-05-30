@@ -4,6 +4,8 @@
 //                         //
 /////////////////////////////
 
+// entry point from APC main = EnterAttractMode() which is a delegate for FP_AttractMode()
+
                                     // Duration..11111110...22222111...33322222...43333333...44444444...55555554...66666555
                                     // Duration..65432109...43210987...21098765...09876543...87654321...65432109...43210987
 const struct LampPat FP_AttractPat1[57] ={{250,0b00000001,0b00000000,0b00000000,0b00000000,0b00000000,0b00000000,0b00000000},
@@ -136,7 +138,10 @@ void FP_AttractMode() {                               // Attract Mode
   AppByte2 = 0;
   LampReturn = FP_AttractMode_LampCycle;
   ActivateTimer(1000, 0, FP_AttractMode_LampCycle);
-  FP_AttractMode_DisplayCycle(0);}
+  FP_AttractMode_DisplayCycle(0);
+  ejectHoles.ReleaseAll();
+  through.ClearOutHole();
+}
 
 void FP_AttractMode_LampCycle(byte Event) {                // play multiple lamp pattern series
   UNUSED(Event);
@@ -148,7 +153,7 @@ void FP_AttractMode_LampCycle(byte Event) {                // play multiple lamp
   ShowLampPatterns(1);}                               // call the player
 
 void FP_AttractMode_DisplayCycle(byte Step) {
-  FP_CheckForLockedBalls(0);
+//  FP_CheckForLockedBalls(0);
   switch (Step) {
   case 0:
     WriteUpper2("APC BASE CODE   ");
@@ -226,5 +231,7 @@ void FP_AttractMode_SW(byte Button) {                  // Attract Mode switch be
     break;
   case FP_SW_START_BUTTON:                            // start game
     FP_StartGame();
+  case FP_SW_OUTHOLE:
+    through.ClearOutHole();
   }
 }
