@@ -1,1 +1,0 @@
-// Firepower functions
