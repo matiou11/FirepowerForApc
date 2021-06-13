@@ -7,6 +7,8 @@ const byte FP_NB_BUMPERS = 4;
 const byte FP_NB_SLINGS = 2;
 const byte FP_NB_FLIPPERS = 2;
 
+const byte FP_NB_BALLS_PER_GAME = 3;
+
 //////////////
 // Switches //
 //////////////
@@ -77,6 +79,31 @@ constexpr byte FP_SOL_EJECT_HOLES[FP_NB_EJECT_HOLES] = {4,5,6}; // left right/lo
 constexpr byte FP_SOL_BUMPERS[FP_NB_BUMPERS] = {17,19,20,18}; // TL, TR, BR, BL
 constexpr byte FP_SOL_SLINGS[FP_NB_SLINGS] = {22,21};
 constexpr byte FP_SOL_LEFT_BALL_SAVER_KICKER = 7;
+
+
+////////////
+// Sounds //
+////////////
+constexpr byte FP_SND_FIREPOWER =           0x60; //
+constexpr byte FP_SND_BACKGROUND =          0x6e;
+constexpr byte FP_SND_BONUS =               0x69;
+constexpr byte FP_SND_LAUNCH =              0x6b; //
+constexpr byte FP_SND_TOP_LANE_THUFF =      0x76; //
+constexpr byte FP_SND_10PTS =               0x7a; //
+constexpr byte FP_SND_100PTS =              0x75; //
+constexpr byte FP_SND_1000PTS =             0x74; //
+constexpr byte FP_SND_POWER_TARGET =        0x7d; //
+constexpr byte FP_SND_123456_TARGET =       0x6f; //
+constexpr byte FP_SND_BOOM =                0x68;
+constexpr byte FP_SND_POWER_COMPLETED =     0x65; //
+constexpr byte FP_SND_123456_COMPLETED =    0x79; //
+constexpr byte FP_SND_ENEMY_DESTROYED =     0x71;
+constexpr byte FP_SND_FIRE_COMPLETED =      0x72; //
+constexpr byte FP_SND_LOCK =                0x7c; //
+constexpr byte FP_SND_SPINNER =             0x6d;
+constexpr byte FP_SND_FIRE123 =             0x67;
+
+
 
 unsigned int FP_SolTimes[32] = {50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,0,0,100,100,100,100,100,100,100,100}; // Activation times for solenoids
 

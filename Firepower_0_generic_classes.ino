@@ -9,6 +9,22 @@ constexpr byte MAX_NB_FLIPPERS = 2;
 constexpr byte MAX_NB_SLINGS = 2;
 constexpr byte MAX_NB_LAMPS_IN_BANKS = 12;
 
+// Lamp Tools
+void ToggleLampIfNeeded(byte lampIndex, bool wantedState)
+{
+  if ( QueryLamp(lampIndex) != wantedState) ToggleLamp(lampIndex);
+}
+void ToggleLamp(byte lampIndex)
+{
+  if ( QueryLamp(lampIndex) ) TurnOffLamp(lampIndex); else TurnOnLamp(lampIndex);
+}
+void BlinkLampBriefly(byte lampIndex, int blinkPeriodMs, int blinkDurationMs)
+{
+  TurnOffLamp(lampIndex);
+  AddBlinkLamp(lampIndex, blinkPeriodMs);
+  ActivateTimer(blinkDurationMs, lampIndex, RemoveBlinkLamp);
+}
+
 // APC_RolloverLanes
 // Class to materialize roll over lanes ("F" "I" "R" "E" on Firepower)
 //   byte nbLanes: number of lanes
@@ -26,10 +42,8 @@ class APC_RolloverLanes
     {
       for (int i = 0; i < nbLanes; i++)
       {
-        for ( int i = 0 ; i < nbLanes ; i++ ) laneStatus[i] = false;
-        TurnOffLamp(lamps[i]);
-        AddBlinkLamp(lamps[i], 100);
-        ActivateTimer(1000, lamps[i], FP_RemoveBlink);
+        laneStatus[i] = false;
+        BlinkLampBriefly(lamps[i],100,1000);
       }
     }
   public:
@@ -196,7 +210,7 @@ class APC_Eject_Holes
   }
   void ActivateHole(byte holeIndex)
   {
-    if (holeIndex == 255)
+    if (holeIndex == 255) // activate a random hole
     {
       // replace with random
       if (!holeActivated[0]) holeActivated[0] = true;
@@ -292,10 +306,14 @@ class APC_Bumpers
     for (int i = 0; i < nbBumpers; i++) { this->switches[i] = switches[i]; this->solenoids[i] = solenoids[i]; this->lamps[i] = lamps[i]; isLit[i] = false;}
     Reset();
   }
-  void LightMode(byte wantedLightMode) // 0=off, 1=half on, 2=all on, -1 to increase level of light, with max 2
+  void LightMode(byte wantedLightMode) // 0=off, 1=half on, 2=all on
   {
-    if (wantedLightMode == -1 && lightMode < 2) lightMode++;
-    else if (lightMode < 2) lightMode = wantedLightMode; 
+    if (wantedLightMode < 2) lightMode = wantedLightMode; 
+    initializeLights();
+  }
+  void UpgradeLightMode()
+  {
+    if (lightMode < 2) lightMode++;
     initializeLights();
   }
   bool Bump(byte bumperIndex) // returns true when lit and false when turned off

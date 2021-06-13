@@ -48,25 +48,9 @@ void FP_init()
 
 void FP_StartGame()  // start a game, called from Attract mode when start switch is pressed
 {
-    NoPlayers = 1;
-    Ball = 1;
-    Player = 1;
-    ExBalls = 0;
-    InLock = 0;
-    
-    FP_BallSaverKickOn = false;
-    FP_Mode_Multiball = false;
-    FP_SpinnerLit = false;
-    FP_ExtraBallLit = false;
-    FP_ExtraBallValidated = false;
+   
     FP_flagIgnorePlungerLaneSwitch = false;
-    FP_InLaneLeftLit = false;
-    FP_InLaneRightLit = false;
-    FP_FireLit = false;
-    FP_PowerLit = false;
     
-    displays.resetScoreDisplays();
-    displays.UpdateCredit(Ball);
     flippers.Enable(true);
     slings.Enable(true);
     bumpers.Enable(true);
@@ -76,10 +60,26 @@ void FP_StartGame()  // start a game, called from Attract mode when start switch
     standUpsPower.Enable(true);
     ejectHoles.Enable(true);
     scoreManager.Enable(true);
-    FP_IncrementScore(0, true); // game starts with bonus = 1000
-    through.ReleaseOneBall();
+
+    // new game
+    NoPlayers = 1; // not managed yet
+    Player = 1; // always one for now
+    Ball = 1;
+    displays.resetScoreDisplays();
+    bumpers.Reset();
+    fireLanes.Reset();
+    standUps123.Reset();
+    standUps456.Reset();
+    standUpsPower.Reset();
+    ejectHoles.Reset();
+    scoreManager.Reset();
+    FP_IncrementScore(0, true, false); // game starts with bonus = 1000
     Switch_Pressed = FP_Game_SwitchPressed;
     Switch_Released = FP_Game_SwitchReleased;
+
+    FP_PlaySound(FP_SND_FIREPOWER);
+    
+    ActivateTimer(1200, 0, FP_NewBall);
 }
 
 
@@ -88,7 +88,7 @@ void FP_Game_SwitchReleased(byte switchNumber)
   switch(switchNumber)
   {
     case FP_SW_PLUNGER_LANE:
-      if (!FP_flagIgnorePlungerLaneSwitch) PlaySound(50, "0_6b.snd");
+      if (!FP_flagIgnorePlungerLaneSwitch) FP_PlaySound(FP_SND_LAUNCH);
       break;
   }
 }
@@ -104,7 +104,7 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte bumperIndex = bumpers.SwitchNumberToBumperIndex(switchNumber);
       bool ret = bumpers.Bump(bumperIndex); // ret = true when lit and false when turned off
-      if (ret) FP_IncrementScore(10000, false); else FP_IncrementScore(100, false);
+      if (ret) FP_IncrementScore(1000, false, true); else FP_IncrementScore(100, false, true);
       break;
     }
     case FP_SW_SLINGS[0]:
@@ -112,7 +112,7 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte slingIndex = slings.SwitchNumberToSlingIndex(switchNumber);
       slings.Sling(slingIndex);
-      FP_IncrementScore(10, true);
+      FP_IncrementScore(10, true, true);
       break;      
     }
     case FP_SW_LEFT_OUTSIDE_ROLLOVER:
@@ -134,7 +134,6 @@ void FP_Game_SwitchPressed(byte switchNumber)
     case FP_SW_OUTHOLE:
       ActivateTimer(500, 0, FP_ClearOutHole);
       ActivateTimer(1000, 0, FP_BallDrained);
-      ActivateTimer(2000, 0, FP_BallDrained); // try again later, just in case
       break;
     case FP_SW_FIRE_ROLLOVERS[0]:
     case FP_SW_FIRE_ROLLOVERS[1]:
@@ -143,7 +142,8 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte laneIndex = fireLanes.SwitchNumberToLaneIndex(switchNumber);
       byte ret = fireLanes.RollOverActivated(laneIndex);
-      FP_IncrementScore(1000, ret != 0); // bonus only if first time through
+      FP_PlaySound(FP_SND_TOP_LANE_THUFF);
+      FP_IncrementScore(1000, ret != 0, false); // bonus only if first time through
       if ( ret == 2 ) FP_FireActivated(0);
       break;
     }
@@ -156,8 +156,8 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte holeIndex = ejectHoles.SwitchNumberToHoleIndex(switchNumber);
       byte ret = ejectHoles.BallInHole(holeIndex); // 0 hole was full, 1 ball not accepted, 2 ball kept
-      if (ret == 1) FP_IncrementScore(1000, false);
-      else if (ret == 2) {FP_IncrementScore(10000, false); ActivateTimer(500, 0, FP_BallLocked);}
+      if (ret == 1) FP_IncrementScore(1000, false, false);
+      else if (ret == 2) {FP_IncrementScore(10000, false, false); ActivateTimer(500, 0, FP_BallLocked);}
       break;
     }
     case FP_SW_123_TARGETS[0]:
@@ -166,7 +166,8 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte standUpIndex = standUps123.SwitchNumberToStandUpIndex(switchNumber);
       bool ret = standUps123.Hit(standUpIndex);
-      FP_IncrementScore(1000, ret); // bonus only if first time hit
+      FP_PlaySound(FP_SND_123456_TARGET);
+      FP_IncrementScore(1000, ret, false); // bonus only if first time hit
       if (standUps123.AllHit()) ActivateTimer(200, 0, FP_StandUpNumbersAllHit);
       break;
     }
@@ -176,7 +177,8 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte standUpIndex = standUps456.SwitchNumberToStandUpIndex(switchNumber);
       bool ret = standUps456.Hit(standUpIndex);
-      FP_IncrementScore(1000, ret); // bonus only if first time hit
+      FP_PlaySound(FP_SND_123456_TARGET);
+      FP_IncrementScore(1000, ret, false); // bonus only if first time hit
       if (standUps456.AllHit()) ActivateTimer(200, 0, FP_StandUpNumbersAllHit);
       break;
     }
@@ -186,34 +188,35 @@ void FP_Game_SwitchPressed(byte switchNumber)
     {
       byte standUpIndex = standUpsPower.SwitchNumberToStandUpIndex(switchNumber);
       bool ret = standUpsPower.Hit(standUpIndex);
-      FP_IncrementScore(1000, false);
+      FP_PlaySound(FP_SND_POWER_TARGET);
+      FP_IncrementScore(1000, false, false);
       if (standUpsPower.AllHit()) ActivateTimer(200, 0, FP_PowerActivated);
       if (FP_ExtraBallLit && switchNumber == FP_SW_POWER_TARGETS[1] && ret) 
       {
         FP_ExtraBallValidated = true;
-        TurnOnLamp(FP_LP_SHOOT_AGAIN_PF);
         FP_ExtraBallLit = false;
-        TurnOffLamp(FP_LP_EXTRABALL_WHEN_LIT);
+        FP_UpdateAllPlayfieldLamps();
       }
       break;
     }
     case FP_SW_SPINNER:
-      if (FP_SpinnerLit) FP_IncrementScore(1000, false); else FP_IncrementScore(100, false);
+      FP_PlaySound(FP_SND_SPINNER);
+      if (FP_SpinnerLit) FP_IncrementScore(1000, false, false); else FP_IncrementScore(100, false, false);
       break;
     case FP_SW_TOP_TARGET:
-      FP_IncrementScore(1000, true);
+      FP_IncrementScore(1000, true, true);
       break;
     case FP_SW_STAR_ROLLOVER_LEFT:
     case FP_SW_STAR_ROLLOVER_RIGHT:
-      FP_IncrementScore(1000, false);
+      FP_IncrementScore(1000, false, true);
       break;
     case FP_SW_INLANE_LEFT:
-      FP_IncrementScore(1000, true);
-      if (FP_InLaneLeftLit) { FP_IncrementScore(1000, true); FP_IncrementScore(1000, true); }
+      FP_IncrementScore(1000, true, true);
+      if (FP_InLaneLeftLit) { FP_IncrementScore(1000, true, true); FP_IncrementScore(1000, true, true); }
       break;
     case FP_SW_INLANE_RIGHT:
-      FP_IncrementScore(1000, true);
-      if (FP_InLaneRightLit) { FP_IncrementScore(1000, true); FP_IncrementScore(1000, true); }
+      FP_IncrementScore(1000, true, true);
+      if (FP_InLaneRightLit) { FP_IncrementScore(1000, true, true); FP_IncrementScore(1000, true, true); }
       break;
     case FP_SW_BUMPER_SIDES[0]:
     case FP_SW_BUMPER_SIDES[1]:
@@ -232,82 +235,111 @@ void FP_Game_SwitchPressed(byte switchNumber)
   }
 }
 
+// called by 
+// TODO: avoid quick reentry into this function (wasting a ball) 
 void FP_BallDrained(byte event)
 {
   UNUSED(event);
-  // TODO: avoid quick reentry into this function (wasting a ball) 
   if (through.NbBallsIn() + ejectHoles.NbBallsLocked() == FP_NB_INSTALLED_BALLS) // are all balls accounted for ?
   {
-    // next ball except if extra ball was validated
-    if (!FP_ExtraBallValidated) Ball++;
-    TurnOffLamp(FP_LP_SHOOT_AGAIN_PF);
-    FP_ExtraBallValidated = false;
-    FP_Mode_Multiball = false;
-    displays.UpdateCredit(Ball);
-    through.ReleaseOneBall();
+    FP_EndBall(0);    
   }
+}
+
+void FP_EndBall(byte event)
+{
+  scoreManager.GetBonus();
+  FP_IncrementScore(Player, 0, false); // to refresh display
+  if (!FP_ExtraBallValidated) Ball++; // next ball except if extra ball was validated
+  if (Ball <= FP_NB_BALLS_PER_GAME)
+  {
+    FP_NewBall(0);
+  }
+  else
+  {
+    FP_EndGame(0);
+  }
+}
+
+void FP_NewBall(byte event)
+{
+  // ball number must be incremented before calling this function
+  FP_BallSaverKickOn = false;
+  FP_Mode_Multiball = false;
+  FP_SpinnerLit = false;
+  FP_ExtraBallLit = false;
+  FP_ExtraBallValidated = false;
+  FP_InLaneLeftLit = false;
+  FP_InLaneRightLit = false;
+  FP_FireLit = false;
+  FP_PowerLit = false;
+  FP_UpdateAllPlayfieldLamps();
+  displays.UpdateCredit(Ball);
+  through.ReleaseOneBall();
+}
+
+void FP_EndGame(byte event)
+{
+  EnterAttractMode(event);
 }
 
 void FP_FireActivated(byte event)
 {
   UNUSED(event);
+  FP_PlaySound(FP_SND_FIRE_COMPLETED);
   FP_FireLit = true;
-  TurnOnLamp(FP_LP_FIRE);
   bool ret = scoreManager.IncrementBonusMultiplier(); // true if succesful, false if already maxed out
   if (!ret)
   {
     FP_ExtraBallLit = true;
-    TurnOnLamp(FP_LP_EXTRABALL_WHEN_LIT);
     standUpsPower.Reset();
   }
   if (FP_PowerLit) FP_FirePowerActivated(0);
+  FP_UpdateAllPlayfieldLamps();
 }
 
 void FP_PowerActivated(byte event)
 {
   UNUSED(event);
+  FP_PlaySound(FP_SND_POWER_COMPLETED);
   FP_PowerLit = true;
-  TurnOnLamp(FP_LP_POWER);
   standUpsPower.Reset();
   FP_InLaneLeftLit = true;
-  TurnOnLamp(FP_LP_INLANE_LEFT);
   FP_InLaneRightLit = true;
-  TurnOnLamp(FP_LP_INLANE_RIGHT);
   if (FP_FireLit) FP_FirePowerActivated(0);
+  FP_UpdateAllPlayfieldLamps();
 }
 
 void FP_FirePowerActivated(byte event)
 {
   // blink and reset
-  TurnOffLamp(FP_LP_POWER);
-  AddBlinkLamp(FP_LP_POWER, 100);
-  ActivateTimer(500, FP_LP_POWER, FP_RemoveBlink);
-  TurnOffLamp(FP_LP_FIRE);
-  AddBlinkLamp(FP_LP_FIRE, 100);
-  ActivateTimer(500, FP_LP_FIRE, FP_RemoveBlink);
+  BlinkLampBriefly(FP_LP_POWER, 100, 500);
+  BlinkLampBriefly(FP_LP_FIRE, 100, 500);
   scoreManager.CollectAndIncrementFirepowerBonus();
   displays.UpdatePlayerScore(1,scoreManager.Score());
+  FP_UpdateAllPlayfieldLamps();
 }
 
 void FP_StandUpNumbersAllHit(byte event)
 {
   UNUSED(event);
-  FP_BallSaverKickOn = true;
-  TurnOnLamp(FP_LP_BALL_SAVER_KICK_ON);
+  FP_BallSaverKickOn = true; 
   if (standUps123.AllHit() && standUps456.AllHit())
   {
-    bumpers.LightMode(-1); // increase bumper light mode
+    FP_PlaySound(FP_SND_123456_COMPLETED);
+    bumpers.UpgradeLightMode(); // increase bumper light mode
     FP_SpinnerLit = true;
-    TurnOnLamp(FP_LP_SPINNER_LIT);
     ejectHoles.ActivateHole(255); // activate randomly one hole
     ejectHoles.ActivateHole(255); // activate randomly a second hole
     standUps123.Reset();
     standUps456.Reset();
   }
+  FP_UpdateAllPlayfieldLamps();
 }
 
 void FP_BallLocked(byte event)
 {
+  FP_PlaySound(FP_SND_LOCK);
   if (ejectHoles.NbBallsLocked() < FP_NB_INSTALLED_BALLS)
   {
     FP_ThroughReleaseOneBall(0);
@@ -322,30 +354,42 @@ void FP_MultiballStart(byte event)
 {
   FP_Mode_Multiball = true;
   // release balls!
-  ActivateTimer(1000, 2, FP_ReleaseLock);
-  ActivateTimer(3000, 1, FP_ReleaseLock);
-  ActivateTimer(5000, 0, FP_ReleaseLock);
+  ActivateTimer(1000, 2, FP_ReleaseLockForMB);
+  ActivateTimer(3000, 1, FP_ReleaseLockForMB);
+  ActivateTimer(5000, 0, FP_ReleaseLockForMB);
   ejectHoles.Reset();
 }
 
-void FP_BumperSidesHit(byte event)
+void FP_BumperSidesHit(byte event) 
 {
-  FP_IncrementScore(10,false);
+  FP_IncrementScore(10,false,true);
 }
 
-void FP_IncrementScore(int points, bool bonus)
+void FP_IncrementScore(int points, bool bonus, bool playSound)
 {
   scoreManager.IncrementScore(points);
-  displays.UpdatePlayerScore(1,scoreManager.Score());
+  displays.UpdatePlayerScore(Player, scoreManager.Score());
   if (bonus) scoreManager.Add1000ToBonus();
+  if (playSound)
+  {
+    if (points == 10) FP_PlaySound(FP_SND_10PTS); 
+    else if (points == 100) FP_PlaySound(FP_SND_100PTS); 
+    else if (points == 1000) FP_PlaySound(FP_SND_1000PTS);
+  }
 }
 
 void FP_UpdateAllPlayfieldLamps()
 {
- 
+  ToggleLampIfNeeded(FP_LP_BALL_SAVER_KICK_ON, FP_BallSaverKickOn);
+  ToggleLampIfNeeded(FP_LP_SPINNER_LIT, FP_SpinnerLit); 
+  ToggleLampIfNeeded(FP_LP_FIRE,FP_FireLit); 
+  ToggleLampIfNeeded(FP_LP_EXTRABALL_WHEN_LIT,FP_ExtraBallLit); 
+  ToggleLampIfNeeded(FP_LP_SHOOT_AGAIN_PF,FP_ExtraBallValidated); 
+  ToggleLampIfNeeded(FP_LP_POWER,FP_PowerLit);
+  ToggleLampIfNeeded(FP_LP_INLANE_LEFT,FP_InLaneLeftLit);
+  ToggleLampIfNeeded(FP_LP_INLANE_RIGHT,FP_InLaneRightLit);
 }
 
-  
 void FP_AddPlayer()
 {
 
@@ -369,9 +413,10 @@ void FP_ReleaseLock(byte index)
     ejectHoles.ReleaseLock(index);
 }
 
-void FP_RemoveBlink(byte lampIndex)
+void FP_ReleaseLockForMB(byte index)
 {
-  RemoveBlinkLamp(lampIndex);
+  FP_PlaySound(FP_SND_FIRE123);
+  ActivateTimer(500, index, FP_ReleaseLock);
 }
 
 void FP_Reactivate_Flag(byte flagIndex)
@@ -385,4 +430,10 @@ void FP_ThroughReleaseOneBall(byte event)
     FP_flagIgnorePlungerLaneSwitch = true; // to avoid launch sound
     through.ReleaseOneBall();
     ActivateTimer(350, 0, FP_Reactivate_Flag);
+}
+
+void FP_PlaySound(byte soundIndex)
+{
+  // call the pinMame exception function
+  EX_Firepower(0, soundIndex);
 }

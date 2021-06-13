@@ -10,8 +10,6 @@
 
 void FP_AttractMode() {                               // Attract Mode
   ACselectRelay = 0; // assign the number of the A/C select relay
-  DispRow1 = DisplayUpper;
-  DispRow2 = DisplayLower;
   digitalWrite(VolumePin,HIGH);                       // set volume to zero
   LampPattern = NoLamps;
   Switch_Pressed = FP_AttractMode_SW;

@@ -1,3 +1,5 @@
+
+
 class FP_ScoreManager
 {
   private:
@@ -30,6 +32,7 @@ class FP_ScoreManager
       bonus = 0;
       score = 0;
       firePowerBonus = 10000;
+      bonusMultiplier = 1;
       specialLit = false;
       specialCollected = false;
       firepowerBonusCollected = false;
@@ -62,7 +65,7 @@ class FP_ScoreManager
       if (bonusMultiplier < 5)
       {
         bonusMultiplier++;
-        multipliersLamps->TurnOneOn();
+        multipliersLamps->TurnSomeLampsOn(bonusMultiplier - 1);
         return true;
       }
       else
@@ -96,6 +99,15 @@ class FP_ScoreManager
           specialLit = !specialCollected;
         }
       }      
+      UpdateLights();
+    }
+    void GetBonus()
+    {
+      // TODO: add here cool bonus count down 
+      score += bonus * bonusMultiplier;
+      bonusMultiplier = 1;
+      multipliersLamps->TurnSomeLampsOn(bonusMultiplier - 1);
+      bonus = 0;
       UpdateLights();
     }
     void UpdateLights()
