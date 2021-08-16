@@ -4,6 +4,12 @@
 //                        //
 ////////////////////////////
 
+// still to implement:
+// - multiplayers
+// - tilt
+// - bonus count
+// - composite sounds
+
 // entry point in FP_StartGame, coming from FP_AttractMode_SW
 
 struct GameDef FP_GameDefinition = {
@@ -24,8 +30,10 @@ bool FP_InLaneLeftLit;
 bool FP_InLaneRightLit;
 bool FP_FireLit;
 bool FP_PowerLit;
+
 // global flags used by Firepower
 bool FP_flagIgnorePlungerLaneSwitch;
+
 // Objects needed by Firepower
 APC_RolloverLanes fireLanes(FP_NB_FIRE_LANES, FP_SW_FIRE_ROLLOVERS, FP_LP_FIRE_LANES);
 APC_Through through(FP_NB_INSTALLED_BALLS, FP_SW_THROUGH, FP_SW_PLUNGER_LANE, FP_SW_OUTHOLE, FP_SOL_SHOOTERLANEFEEDER, FP_SOL_OUTHOLEKICKER);
@@ -33,22 +41,24 @@ APC_Eject_Holes ejectHoles(FP_NB_EJECT_HOLES, FP_SW_EJECT_HOLES, FP_LP_EJECT_HOL
 APC_Bumpers bumpers(FP_NB_BUMPERS, FP_SW_BUMPERS, FP_LP_BUMPERS, FP_SOL_BUMPERS, 0);
 APC_Flippers flippers(FP_NB_FLIPPERS, FP_SOL_FLIPPER_ENABLE);
 APC_Slings slings(FP_NB_SLINGS, FP_SW_SLINGS, FP_SOL_SLINGS);
-APC_Standups standUps123(3, FP_SW_123_TARGETS, FP_LP_123_TARGETS, true);
-APC_Standups standUps456(3, FP_SW_456_TARGETS, FP_LP_456_TARGETS, true);
-APC_Standups standUpsPower(3, FP_SW_POWER_TARGETS, FP_LP_POWER_TARGETS, false);
+APC_Standups standUps123("123", 3, FP_SW_123_TARGETS, FP_LP_123_TARGETS, true);
+APC_Standups standUps456("456", 3, FP_SW_456_TARGETS, FP_LP_456_TARGETS, true);
+APC_Standups standUpsPower("Power", 3, FP_SW_POWER_TARGETS, FP_LP_POWER_TARGETS, false);
 APC_Sys6Displays displays;
 FP_ScoreManager scoreManager; // should be array of 4, one for each player
 
 void FP_init() 
 {
-	//if (APC_settings[DebugMode]) Serial.begin(115200); // activate serial interface in debug mode
-  //Serial.begin(115200);
+  if (APC_settings[DebugMode]) Serial.begin(115200); // activate serial interface in debug mode
+  debug.enable(FP_DEBUG == 1);
   GameDefinition = FP_GameDefinition; // read the game specific settings and highscores
 }                
 
 void FP_StartGame()  // start a game, called from Attract mode when start switch is pressed
 {
-   
+    debug.write("starting new game...");
+    debug.write("debug mode:",APC_settings[DebugMode]);
+    
     FP_flagIgnorePlungerLaneSwitch = false;
     
     flippers.Enable(true);
@@ -127,6 +137,7 @@ void FP_Game_SwitchPressed(byte switchNumber)
     case FP_SW_BALL_ROLL_TILT:
     case FP_SW_SLAM_TILT:
     case FP_SW_PLAYFIELD_TILT:
+      // not implemented yet
       break;
     case FP_SW_START_BUTTON:
       FP_AddPlayer();

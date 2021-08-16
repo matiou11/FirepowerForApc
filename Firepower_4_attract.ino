@@ -11,6 +11,7 @@
 void FP_AttractMode() {                               // Attract Mode
   ACselectRelay = 0; // assign the number of the A/C select relay
   digitalWrite(VolumePin,HIGH);                       // set volume to zero
+  RemoveAllBlinkingLamps();
   LampPattern = NoLamps;
   Switch_Pressed = FP_AttractMode_SW;
   Switch_Released = DummyProcess;
@@ -99,7 +100,8 @@ void FP_AttractMode_SW(byte Button) {                  // Attract Mode switch be
     LampPattern = NoLamps;                            // Turn off all lamps
     ReleaseAllSolenoids();
     if (APC_settings[DebugMode]) {                    // deactivate serial interface in debug mode
-      Serial.end();}
+      Serial.end();
+      }
     if (!QuerySwitch(73)) {                           // Up/Down switch pressed?
       WriteUpper("  TEST  MODE    ");
       WriteLower("                ");

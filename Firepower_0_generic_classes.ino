@@ -9,7 +9,7 @@ constexpr byte MAX_NB_FLIPPERS = 2;
 constexpr byte MAX_NB_SLINGS = 2;
 constexpr byte MAX_NB_LAMPS_IN_BANKS = 12;
 
-// Lamp Tools
+// Lamp Tools, to be integrated in apc ?
 void ToggleLampIfNeeded(byte lampIndex, bool wantedState)
 {
   if ( QueryLamp(lampIndex) != wantedState) ToggleLamp(lampIndex);
@@ -24,6 +24,57 @@ void BlinkLampBriefly(byte lampIndex, int blinkPeriodMs, int blinkDurationMs)
   AddBlinkLamp(lampIndex, blinkPeriodMs);
   ActivateTimer(blinkDurationMs, lampIndex, RemoveBlinkLamp);
 }
+void RemoveAllBlinkingLamps()
+{
+  for (int index = 1; index <= 64; index++) RemoveBlinkLamp(index);
+}
+
+ // Debug tools
+class APC_Debug
+{
+  private:
+    bool enabled;
+  public:
+    void enable(bool enabled)
+    {
+      this->enabled = enabled;
+      if (enabled) Serial.begin(115200);
+    }
+    void write(String msg, int integer)
+    {
+      if (enabled)
+      {
+        Serial.print(msg);
+        Serial.println(integer);
+      }
+    }
+    void write(String msg)
+    {
+      if (enabled)
+      {
+        Serial.println(msg);
+      }
+    }
+    void write(String name, String msg, int integer)
+    {
+      if (enabled)
+      {
+        Serial.print(name);
+        Serial.print(msg);
+        Serial.println(integer);
+      }
+    }
+    void write(String name, String msg)
+    {
+      if (enabled)
+      {
+        Serial.print(name);
+        Serial.println(msg);
+      }
+    }
+};
+
+APC_Debug debug;
 
 // APC_RolloverLanes
 // Class to materialize roll over lanes ("F" "I" "R" "E" on Firepower)
@@ -423,6 +474,7 @@ class APC_Flippers
 class APC_Standups
 {
   private:
+    String name;
     byte nbTargets;
     byte switches[MAX_NB_STANDUP_TARGETS_PER_BANK];
     byte lamps[MAX_NB_STANDUP_TARGETS_PER_BANK];
@@ -430,8 +482,9 @@ class APC_Standups
     bool enabled;
     bool hit[MAX_NB_STANDUP_TARGETS_PER_BANK];
   public:
-    APC_Standups(byte nbTargets, const byte *switches, const byte *lamps, bool blinking)
+    APC_Standups(String name, byte nbTargets, const byte *switches, const byte *lamps, bool blinking)
     {
+      this->name = name;
       this->nbTargets = nbTargets;
       for (int i = 0; i < nbTargets; i++) { this->switches[i] = switches[i]; this->lamps[i] = lamps[i]; }
       this->blinking = blinking;
@@ -439,6 +492,7 @@ class APC_Standups
     }
     void Enable(bool enable)
     {
+      debug.write(name, "enabling stand ups");
       enabled = enable;
       Reset();
     }
@@ -462,15 +516,17 @@ class APC_Standups
     }
     void UpdateLamps()
     {
+      debug.write(name, "updating lamps stand ups");
       for (int i = 0; i < nbTargets; i++)
       {
         if (hit[i] && enabled) { RemoveBlinkLamp(lamps[i]); TurnOnLamp(lamps[i]); }
-        else if (blinking && enabled) { AddBlinkLamp(lamps[i], 250); }
-        else { RemoveBlinkLamp(lamps[i]); TurnOffLamp(lamps[i]); }
+        else if (blinking && enabled) { TurnOnLamp(lamps[i]); AddBlinkLamp(lamps[i], 250); debug.write(name, "set blink", i);}
+        else { RemoveBlinkLamp(lamps[i]); TurnOffLamp(lamps[i]); debug.write(name, "remove blink", i);}
       }
     }
     void Reset()
     {
+      debug.write(name, "resetting stand ups");
       for (int i = 0; i < nbTargets; i++) hit[i] = false;
       UpdateLamps();
     }
